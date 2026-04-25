@@ -1,6 +1,6 @@
 # 🚗 Projet 16 — Classification des Types de Véhicules
 
-> Module : Machine Learning Avancée | ING4 DS
+> Module : Machine Learning Avancée | 
 
 ---
 
@@ -157,6 +157,4 @@ curl -X POST http://localhost:5000/predict \
 
 ---
 
-## 👤 Auteur
 
-Étudiant ING4 DS — Module Machine Learning Avancée
