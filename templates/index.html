@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VehicleAI — Classification par Machine Learning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0A0A0F;
+            --surface: #12121A;
+            --surface2: #1A1A26;
+            --border: #2A2A3E;
+            --accent: #6C63FF;
+            --accent2: #FF6B9D;
+            --accent3: #00D4AA;
+            --text: #E8E8F0;
+            --text-muted: #7A7A9A;
+            --bus: #FF6B35;
+            --van: #4ECDC4;
+            --saab: #45B7D1;
+            --opel: #96CEB4;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Background Grid ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Orbs ── */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .orb-1 { width: 400px; height: 400px; background: rgba(108,99,255,0.15); top: -100px; right: -100px; }
+        .orb-2 { width: 300px; height: 300px; background: rgba(255,107,157,0.1); bottom: 100px; left: -80px; }
+        .orb-3 { width: 200px; height: 200px; background: rgba(0,212,170,0.08); top: 50%; left: 50%; }
+
+        /* ── Header ── */
+        header {
+            position: relative;
+            z-index: 10;
+            padding: 32px 48px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 24px;
+            letter-spacing: -0.5px;
+        }
+        .logo span { color: var(--accent); }
+
+        .header-badges {
+            display: flex;
+            gap: 12px;
+        }
+
+        .badge {
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--surface);
+        }
+        .badge.live { border-color: var(--accent3); color: var(--accent3); }
+        .badge.live::before {
+            content: '●';
+            margin-right: 6px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* ── Main layout ── */
+        main {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 48px;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeUp 0.8s ease forwards;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            padding: 8px 20px;
+            border: 1px solid var(--accent);
+            border-radius: 100px;
+            font-size: 12px;
+            color: var(--accent);
+            margin-bottom: 24px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(40px, 6vw, 72px);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -2px;
+            margin-bottom: 20px;
+        }
+
+        h1 .highlight {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-desc {
+            font-size: 16px;
+            color: var(--text-muted);
+            max-width: 500px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+
+        /* ── Stats bar ── */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            overflow: hidden;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .stat-item {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* ── Content grid ── */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        /* ── Panel ── */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+        }
+
+        .panel-body { padding: 28px; }
+
+        /* ── Quick examples ── */
+        .examples-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 28px;
+        }
+
+        .example-btn {
+            padding: 12px 8px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface2);
+            color: var(--text);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+        }
+
+        .example-btn:hover {
+            border-color: var(--accent);
+            background: rgba(108,99,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .example-btn .example-emoji { font-size: 24px; display: block; margin-bottom: 6px; }
+        .example-btn .example-name { color: var(--text-muted); }
+
+        /* ── Form grid ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-input {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 11px 14px;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(108,99,255,0.05);
+        }
+
+        /* ── Predict button ── */
+        .predict-btn {
+            width: 100%;
+            margin-top: 24px;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Syne', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .predict-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .predict-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,99,255,0.4); }
+        .predict-btn:active { transform: translateY(0); }
+        .predict-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* ── Result Panel ── */
+        .result-panel {
+            position: sticky;
+            top: 24px;
+        }
+
+        .result-placeholder {
+            padding: 60px 28px;
+            text-align: center;
+        }
+
+        .result-placeholder .placeholder-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+            opacity: 0.3;
+        }
+
+        .result-placeholder p {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* ── Result content ── */
+        #result-content { display: none; }
+
+        .result-vehicle {
+            text-align: center;
+            padding: 32px 28px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .vehicle-emoji {
+            font-size: 72px;
+            margin-bottom: 12px;
+            display: block;
+            animation: bounceIn 0.5s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .vehicle-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .vehicle-description {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(108,99,255,0.15);
+            color: var(--accent);
+            border: 1px solid rgba(108,99,255,0.3);
+        }
+
+        /* ── Probability bars ── */
+        .prob-section { padding: 24px 28px; }
+
+        .prob-title {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+
+        .prob-item { margin-bottom: 14px; }
+
+        .prob-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .prob-class { font-size: 13px; }
+        .prob-value { font-size: 13px; color: var(--text-muted); }
+
+        .prob-bar-bg {
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .prob-bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ── Loading ── */
+        .loading {
+            text-align: center;
+            padding: 60px 28px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Error ── */
+        .error-msg {
+            background: rgba(255, 80, 80, 0.1);
+            border: 1px solid rgba(255, 80, 80, 0.3);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-top: 16px;
+            font-size: 13px;
+            color: #FF6B6B;
+            display: none;
+        }
+
+        /* ── Footer ── */
+        footer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px 48px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        footer span { color: var(--accent); }
+
+        /* ── Animations ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-delay-1 { animation: fadeUp 0.8s 0.1s ease both; }
+        .animate-delay-2 { animation: fadeUp 0.8s 0.2s ease both; }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            main { padding: 40px 24px; }
+            header { padding: 24px; }
+            .content-grid { grid-template-columns: 1fr; }
+            .result-panel { position: static; }
+            h1 { font-size: 36px; }
+            .examples-row { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background effects -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">Vehicle<span>AI</span></div>
+        <div class="header-badges">
+            <span class="badge live">API Active</span>
+            <span class="badge">Random Forest</span>
+            <span class="badge">Projet ML #16</span>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main>
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-tag">Machine Learning Avancée</div>
+            <h1>
+                Identifier le<br>
+                <span class="highlight">type de véhicule</span><br>
+                par IA
+            </h1>
+            <p class="hero-desc">
+                Entrez les caractéristiques techniques d'un véhicule et notre modèle Random Forest prédit instantanément sa catégorie.
+            </p>
+
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-accuracy">82.6%</div>
+                    <div class="stat-label">Précision</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Classes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">18</div>
+                    <div class="stat-label">Features</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">100</div>
+                    <div class="stat-label">Arbres</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content grid -->
+        <div class="content-grid animate-delay-1">
+
+            <!-- Left: Form -->
+            <div>
+                <!-- Quick examples -->
+                <div class="panel" style="margin-bottom: 20px;">
+                    <div class="panel-header">
+                        <span class="panel-title">⚡ Exemples rapides</span>
+                        <span style="font-size: 12px; color: var(--text-muted);">Cliquez pour remplir le formulaire</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="examples-row">
+                            <button class="example-btn" onclick="loadExample('bus')">
+                                <span class="example-emoji">🚌</span>
+                                <span class="example-name">Bus</span>
+                            </button>
+                            <button class="example-btn" onclick="loadExample('van')">
+                                <span class="example-emoji">🚐</span>
+                                <span class="example-name">Van</span>
+                            </button>
+                            <button class="example-btn" onclick="loadExample('saab')">
+                                <span class="example-emoji">🚗</span>
+                                <span class="example-name">Saab</span>
+                            </button>
+                            <button class="example-btn" onclick="loadExample('opel')">
+                                <span class="example-emoji">🚙</span>
+                                <span class="example-name">Opel</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">📊 Caractéristiques du véhicule</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-grid" id="form-grid">
+                            <!-- Generated by JS -->
+                        </div>
+
+                        <div class="error-msg" id="error-msg"></div>
+
+                        <button class="predict-btn" id="predict-btn" onclick="predict()">
+                            🔍 Classifier le Véhicule
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Result -->
+            <div class="result-panel">
+                <div class="panel" id="result-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">🎯 Résultat</span>
+                    </div>
+
+                    <!-- Placeholder -->
+                    <div class="result-placeholder" id="result-placeholder">
+                        <span class="placeholder-icon">🤖</span>
+                        <p>Remplissez les caractéristiques et cliquez sur <strong style="color: var(--text)">Classifier</strong> pour obtenir une prédiction.</p>
+                    </div>
+
+                    <!-- Loading -->
+                    <div class="loading" id="result-loading" style="display:none;">
+                        <div class="spinner"></div>
+                        <p style="color: var(--text-muted); font-size: 13px;">Analyse en cours...</p>
+                    </div>
+
+                    <!-- Result -->
+                    <div id="result-content">
+                        <div class="result-vehicle" id="result-vehicle">
+                            <span class="vehicle-emoji" id="vehicle-emoji">🚗</span>
+                            <div class="vehicle-label" id="vehicle-label">—</div>
+                            <div class="vehicle-description" id="vehicle-desc">—</div>
+                            <div class="confidence-badge" id="confidence-badge">—</div>
+                        </div>
+
+                        <div class="prob-section">
+                            <div class="prob-title">Distribution des probabilités</div>
+                            <div id="prob-bars"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        Projet ML #16 — Classification des Types de Véhicules &nbsp;|&nbsp;
+        Algorithme : <span>Random Forest</span> &nbsp;|&nbsp;
+        Backend : <span>Flask</span> &nbsp;|&nbsp;
+        Dataset : <span>UCI Vehicle Silhouettes</span>
+    </footer>
+
+    <script>
+        // ── Feature definitions ──
+        const FEATURES = [
+            { key: 'COMPACTNESS', label: 'Compacité', min: 70, max: 120 },
+            { key: 'CIRCULARITY', label: 'Circularité', min: 30, max: 70 },
+            { key: 'DISTANCE_CIRCULARITY', label: 'Dist. Circularité', min: 60, max: 110 },
+            { key: 'RADIUS_RATIO', label: 'Ratio Rayon', min: 180, max: 320 },
+            { key: 'PR_AXIS_ASPECT_RATIO', label: 'Aspect Axe PR', min: 70, max: 140 },
+            { key: 'MAX_LENGTH_ASPECT_RATIO', label: 'Aspect Longueur Max', min: 5, max: 18 },
+            { key: 'SCATTER_RATIO', label: 'Ratio Dispersion', min: 750, max: 1050 },
+            { key: 'ELONGATEDNESS', label: 'Élongation', min: 20, max: 55 },
+            { key: 'PR_AXIS_RECT', label: 'Rect. Axe PR', min: 110, max: 175 },
+            { key: 'MAX_LENGTH_RECT', label: 'Rect. Long. Max', min: 150, max: 225 },
+            { key: 'SCALED_VARIANCE_MAJOR', label: 'Variance Majeure', min: 160, max: 280 },
+            { key: 'SCALED_VARIANCE_MINOR', label: 'Variance Mineure', min: 160, max: 260 },
+            { key: 'SCALED_RADIUS_OF_GYRATION', label: 'Rayon de Gyration', min: 140, max: 220 },
+            { key: 'SKEWNESS_MAJOR', label: 'Asymétrie Majeure', min: 0, max: 12 },
+            { key: 'SKEWNESS_MINOR', label: 'Asymétrie Mineure', min: 2, max: 14 },
+            { key: 'KURTOSIS_MAJOR', label: 'Kurtosis Majeur', min: 2, max: 14 },
+            { key: 'KURTOSIS_MINOR', label: 'Kurtosis Mineur', min: 5, max: 18 },
+            { key: 'HOLLOWS_RATIO', label: 'Ratio Creux', min: 165, max: 215 },
+        ];
+
+        const CLASS_COLORS = {
+            bus: '#FF6B35',
+            van: '#4ECDC4',
+            saab: '#45B7D1',
+            opel: '#96CEB4'
+        };
+
+        // ── Build form ──
+        function buildForm() {
+            const grid = document.getElementById('form-grid');
+            FEATURES.forEach(f => {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+                group.innerHTML = `
+                    <label class="form-label">${f.label}</label>
+                    <input
+                        type="number"
+                        class="form-input"
+                        id="input-${f.key}"
+                        placeholder="${Math.round((f.min + f.max) / 2)}"
+                        min="${f.min}"
+                        max="${f.max}"
+                        step="1"
+                    >
+                `;
+                grid.appendChild(group);
+            });
+        }
+
+        // ── Load example ──
+        async function loadExample(type) {
+            try {
+                const res = await fetch(`/example/${type}`);
+                const data = await res.json();
+                Object.keys(data).forEach(key => {
+                    const input = document.getElementById(`input-${key}`);
+                    if (input) input.value = data[key];
+                });
+            } catch {
+                FEATURES.forEach(f => {
+                    document.getElementById(`input-${f.key}`).value = Math.round((f.min + f.max) / 2);
+                });
+            }
+        }
+
+        // ── Predict ──
+        async function predict() {
+            const btn = document.getElementById('predict-btn');
+            const errEl = document.getElementById('error-msg');
+            errEl.style.display = 'none';
+
+            // Gather values
+            const payload = {};
+            let valid = true;
+            FEATURES.forEach(f => {
+                const val = document.getElementById(`input-${f.key}`).value;
+                if (val === '' || isNaN(val)) {
+                    valid = false;
+                    document.getElementById(`input-${f.key}`).style.borderColor = '#FF6B6B';
+                } else {
+                    document.getElementById(`input-${f.key}`).style.borderColor = '';
+                    payload[f.key] = parseFloat(val);
+                }
+            });
+
+            if (!valid) {
+                errEl.textContent = '⚠️ Veuillez remplir tous les champs correctement.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyse...';
+            document.getElementById('result-placeholder').style.display = 'none';
+            document.getElementById('result-content').style.display = 'none';
+            document.getElementById('result-loading').style.display = 'block';
+
+            try {
+                const res = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                showResult(data);
+
+            } catch (e) {
+                errEl.textContent = `❌ Erreur : ${e.message}`;
+                errEl.style.display = 'block';
+                document.getElementById('result-placeholder').style.display = 'block';
+            }
+
+            document.getElementById('result-loading').style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = '🔍 Classifier le Véhicule';
+        }
+
+        // ── Show result ──
+        function showResult(data) {
+            const info = data.info;
+            const prediction = data.prediction;
+
+            document.getElementById('vehicle-emoji').textContent = info.emoji || '🚗';
+            document.getElementById('vehicle-label').textContent = info.label || prediction;
+            document.getElementById('vehicle-desc').textContent = info.description || '';
+            document.getElementById('confidence-badge').textContent = `Confiance : ${data.confidence}%`;
+
+            // Color accent
+            const color = CLASS_COLORS[prediction] || '#6C63FF';
+            document.getElementById('vehicle-label').style.color = color;
+            document.getElementById('confidence-badge').style.color = color;
+            document.getElementById('confidence-badge').style.borderColor = color + '44';
+            document.getElementById('confidence-badge').style.background = color + '18';
+
+            // Probability bars
+            const barsEl = document.getElementById('prob-bars');
+            barsEl.innerHTML = '';
+
+            const sorted = Object.entries(data.probabilities).sort((a, b) => b[1] - a[1]);
+            sorted.forEach(([cls, prob]) => {
+                const color = CLASS_COLORS[cls] || '#6C63FF';
+                const emojis = { bus: '🚌', van: '🚐', saab: '🚗', opel: '🚙' };
+                const labels = { bus: 'Bus', van: 'Van', saab: 'Saab', opel: 'Opel' };
+
+                barsEl.innerHTML += `
+                    <div class="prob-item">
+                        <div class="prob-row">
+                            <span class="prob-class">${emojis[cls] || '🚗'} ${labels[cls] || cls}</span>
+                            <span class="prob-value">${prob}%</span>
+                        </div>
+                        <div class="prob-bar-bg">
+                            <div class="prob-bar-fill"
+                                style="width: 0%; background: ${color};"
+                                data-target="${prob}">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('result-content').style.display = 'block';
+
+            // Animate bars
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.prob-bar-fill').forEach(bar => {
+                    setTimeout(() => {
+                        bar.style.width = bar.dataset.target + '%';
+                    }, 100);
+                });
+            });
+        }
+
+        // ── Init ──
+        buildForm();
+
+        // Load model info
+        fetch('/info').then(r => r.json()).then(data => {
+            document.getElementById('stat-accuracy').textContent = data.accuracy + '%';
+        }).catch(() => {});
+    </script>
+</body>
+</html>
