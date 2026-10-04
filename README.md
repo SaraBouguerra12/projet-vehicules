@@ -1,6 +1,6 @@
-# 🚗 Projet 16 — Classification des Types de Véhicules
+# 🚗 — Classification des Types de Véhicules
 
-> Module : Machine Learning Avancée | 
+>  Machine Learning Avancée | 
 
 ---
 
